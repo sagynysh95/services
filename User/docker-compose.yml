@@ -1,0 +1,91 @@
+services:
+  app:
+    build:
+      dockerfile: Dockerfile
+      context: .
+    container_name: app
+    ports:
+      - "8000:8000"
+    restart: always
+    depends_on:
+      - mongo
+      - minio
+    volumes:
+      - .:/app
+    environment:
+      MONGO_HOST: ${DATABASE_HOST}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+    networks:
+      - mynetwork
+  
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    ports:
+      - "${DATABASE_PORT}:${DATABASE_PORT}"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${DATABASE_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${DATABASE_PASSWORD}
+    networks:
+      - mynetwork
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ENABLE_ADMIN: true
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${DATABASE_USERNAME}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${DATABASE_PASSWORD}
+      ME_CONFIG_MONGODB_SERVER: mongo
+
+      ME_CONFIG_BASICAUTH_USERNAME: ${BASICAUTH_USERNAME}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${BASICAUTH_PASSWORD}
+    networks:
+      - mynetwork
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    ports:
+      - "9000:9000"   
+      - "9001:9001"  
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - mynetwork
+
+  # minio_bucket_creator:
+  #   image: minio/mc
+  #   container_name: minio_bucket_creator
+  #   depends_on:
+  #     - minio
+  #   entrypoint: /bin/sh -c " \
+  #     until (mc alias set minio http://minio:9000 admin admin123); do \
+  #       echo 'Waiting for MinIO...'; sleep 5; \
+  #     done && \
+  #     mc mb minio/employees && \
+  #     mc policy set public minio/employees && \
+  #     echo 'Public access granted to employees bucket.'"
+  #   networks:
+  #     - mynetwork
+    # entrypoint: >
+    #   /bin/sh -c " until (mc alias set myminio http://minio:9000 admin admin123); do echo 'Waiting for MinIO...'; sleep 3; done && mc mb myminio/employees && mc policy set public myminio/employees "
+
+
+networks:
+  mynetwork:
+    driver: bridge
+
+volumes:
+  minio_data:
+  mongo_data:
