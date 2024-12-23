@@ -25,33 +25,33 @@ class EmployeeRole(str, Enum):
 class User(BaseModel):
     name: Optional[str] = Field(
         default=None,
-        description="Имя пользователя на кириллице"
+        description="User name"
     )
     surname: Optional[str] = Field(
         default=None,
-        description="Фамилия пользователя на кириллице"
+        description="User surname"
     )
     father_name: Optional[str] = Field(
         default=None,
-        description="Отчество пользователя на кириллице"
+        description="User middle name"
     )
     email: Optional[EmailStr] = Field(
         default=None,
-        description="Валидный емайл"
+        description="Valid email"
     )
     iin: Optional[str] = Field(
         default=None,
-        description="ИИН должен содержать 12 цифр",
+        description="IIN must contain 12 digits",
         pattern=r"^\d{12}$"
     )
     birth_date: Optional[str] = Field(
         default=None,
-        description="Дата рождения в формате YYYY-MM-DD",
+        description="Birth date format YYYY-MM-DD",
 
     )
     role: EmployeeRole = Field(
         default=None,
-        description="Сотрудник, посетитель или админ"
+        description="employee, guest or administrator"
     )
     phone_number: Optional[str] = Field(
         default=None,
@@ -59,37 +59,41 @@ class User(BaseModel):
     )
     rank: Optional[str] = Field(
         default=None,
-        examples=["майор", "капитан", "полковник"],
-        description="Военное звание пользователя если есть"
+        examples=["Major", "Captain", "Colonel"],
+        description="User's military rank"
     )
     military_unit: Optional[str] = Field(
         default=None, 
-        description="Наименование части где работает пользователь если есть"
+        description="The name of military unit where user works"
     )
     department: Optional[str] = Field(
         default=None,
-        description="Департамент где работает пользователь"
+        description="Department where user works"
     )
     gender: Gender = Field(
         default=None,
-        description="Пол пользователя"
+        description="User's gender"
     )
     marital_status: Optional[str] = Field(
         default=None,
-        description="Семейное положение"
+        description="Marital status of user"
     )
     address: Optional[str] = Field(
-        default=None
+        default=None,
+        description="Address where user lives"
     )
     education_level: Optional[str] = Field(
-        default=None
+        default=None,
+        description="User's educational level",
+        examples=["bachelor's degree", "master's degree"]
     )
     languages_spoken: Optional[str] = Field(
-        default=None
+        default=None,
+        description="languages spoken by the user"
     )
     comments: Optional[str] = Field(
         default=None,
-        description="Комментарий"
+        description="Any comments"
     )
 
     @model_validator(mode="before")
@@ -101,36 +105,41 @@ class User(BaseModel):
         try:
             dob = datetime.strptime(birth_date, "%Y-%m-%d")
         except ValueError:
-            raise ValueError("Дата рождения должна быть в формате YYYY-MM-DD.")
+            raise ValueError("The date of birth must be in the YYYY-MM-DD format.")
 
         if dob > datetime.now():
-            raise ValueError("Дата рождения не может быть в будущем.")
+            raise ValueError("The date of birth cannot be in the future.")
 
         if (datetime.now() - dob).days / 365 > 150:
-            raise ValueError("Возраст не может превышать 150 лет.")
+            raise ValueError("The age may not exceed 150 years.")
 
         return values
 
 class UserCreate(User):
     user_id: Optional[str] = Field(
         default=None,
-        description="Генерирует автоматический"
+        description="Generates an automatic"
     )
     img_path: Optional[str] = Field(
         default=None,
-        description="Вставляется автоматический, это ссылка на фото пользователя"
+        description="It is inserted automatically, this is a link to the user's photo"
     )
     username: Optional[str] = Field(
         default=None,
-        description="Генерируется автоматический"
+        description="Generates automatically by user name and surname"
     )
     password: Optional[str] = Field(
         default="123456",
         # default_factory=generate_password,
-        description="Генерируется автоматический первый раз"
+        description="It is '123456' by default. Need to be updated by user"
     )
     created_at: Optional[datetime] = Field(
-        default_factory=datetime.now
+        default_factory=datetime.now,
+        description="Time when user's account was created"
+    )
+    updated_at: Optional[datetime] = Field(
+        default_factory=datetime.now,
+        description="Time when user updated information"
     )
     
     @model_validator(mode="before")
@@ -149,7 +158,7 @@ class UserCreate(User):
         password = self.password
         logger.info(password)
         if not isinstance(password, str):
-            raise ValueError("Пароль должен быть строкой.")
+            raise ValueError("Password must be a string")
         
         hashed_password = hashlib.sha256(password.encode('utf-8')).hexdigest()
         self.password = str(hashed_password)
@@ -158,50 +167,29 @@ class UserCreate(User):
 
 class UserRead(User):
     user_id: Optional[str] = Field(
-        default=None,
-        description="Генерирует автоматический"
+        default=None
     )
     img_path: Optional[str] = Field(
-        default=None,
-        description="Вставляется автоматический, это ссылка на фото пользователя"
+        default=None
     )
     username: Optional[str] = Field(
-        default=None,
-        description="Генерируется автоматический"
+        default=None
     )
     password: Optional[str] = Field(
-        default=None,
-        description="По умолчанию 123456"
+        default=None
     )
     created_at: Optional[datetime] = Field(
-        default=None,
+        default=None
     )
-
-    # @model_validator(mode="before")
-    # def validate_password(cls, values):
-    #     password = values.get("password")
-    #     if not password:
-    #         return values
-    #     print(password)
-    #     if not isinstance(password, str):
-    #         raise ValueError("Пароль должен быть строкой.")
-    #     pattern = (
-    #         r"^(?=.*[a-z])"        # хотя бы одна строчная буква
-    #         r"(?=.*[A-Z])"         # хотя бы одна заглавная буква
-    #         r"(?=.*\d)"            # хотя бы одна цифра
-    #         r"(?=.*[!@#$%^&*])"    # хотя бы один специальный символ
-    #         r".{8,20}$"            # длина от 8 до 20 символов
-    #     )
-    #     if not re.match(pattern, password):
-    #         raise ValueError(
-    #             "Пароль должен содержать от 8 до 20 символов, включая строчные и заглавные буквы, цифры и специальные символы."
-    #         )
-    #     hashed_password = hashlib.sha256(password.encode('utf-8')).hexdigest()
-    #     values["password"] = str(hashed_password)
-    #     return values
+    updated_at: Optional[datetime] = Field(
+        default=None
+    )
     
 
 class UserUpdate(UserRead):
+    updated_at: Optional[datetime] = Field(
+        default_factory=datetime.now
+    )
 
     @model_validator(mode="before")
     def validate_password(cls, values):
@@ -210,7 +198,7 @@ class UserUpdate(UserRead):
             return values
         print(password)
         if not isinstance(password, str):
-            raise ValueError("Пароль должен быть строкой.")
+            raise ValueError("Password must be a string")
         pattern = (
             r"^(?=.*[a-z])"        # хотя бы одна строчная буква
             r"(?=.*[A-Z])"         # хотя бы одна заглавная буква
@@ -220,7 +208,7 @@ class UserUpdate(UserRead):
         )
         if not re.match(pattern, password):
             raise ValueError(
-                "Пароль должен содержать от 8 до 20 символов, включая строчные и заглавные буквы, цифры и специальные символы."
+                "The password must contain from 8 to 20 characters, including lowercase and uppercase letters, numbers, and special characters."
             )
         hashed_password = hashlib.sha256(password.encode('utf-8')).hexdigest()
         values["password"] = str(hashed_password)

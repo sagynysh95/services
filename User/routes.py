@@ -88,8 +88,8 @@ def update_user(user_id: str, employee: UserUpdate):
         result = mongo_update_one(user_id, update_data)
 
         if result.modified_count == 0:
-            raise HTTPException(status_code=404, detail="Пользователь не найден")
-        return {"updated": "Данные успешно обновлены"}
+            raise HTTPException(status_code=404, detail="User not found")
+        return {"updated": "Data was successfully updated"}
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Error: {e}")
     
@@ -99,7 +99,7 @@ def delete_user(user_id: str):
     try:
         result = mongo_delete_one(user_id)
         if result.deleted_count == 0:
-            raise HTTPException(status_code=404, detail="Пользователь не найден")
-        return {"deleted": "Пользователь удален"}
+            raise HTTPException(status_code=404, detail="User not found")
+        return {"deleted": "User wa deleted"}
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Error: {e}")
