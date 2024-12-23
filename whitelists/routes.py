@@ -13,6 +13,7 @@ router = APIRouter(prefix="/whitelist", tags=["whitelist"])
 def create_permission_by_userid(data: WhitelistCreate):
     try:
         data_dict = data.model_dump(exclude_unset=False)
+        logger.info(f"checting post {data_dict}")
         result = mongo_insert_one(data_dict["user_id"], data_dict)
         print(result)
         return WhitelistBase.model_validate(result)

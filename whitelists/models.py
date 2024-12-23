@@ -44,7 +44,7 @@ class WhitelistBase(BaseModel):
     )
     end_time: Optional[str] = Field(
         default=None, 
-        description="permission expiration time",
+        description="permission expiration time. If not defined, ",
         examples=["2024-12-24 00:00:00"]
     )
     weekday: Optional[WeekdayEnum] = Field(
@@ -63,6 +63,23 @@ class WhitelistBase(BaseModel):
         default=None,
         description="end hour for permission, format '09:15'"
     )
+    first_week: Optional[bool] = Field(
+        default=False,
+        description="True if permission only for one weekday of the first week of the month"
+    )
+    second_week: Optional[bool] = Field(
+        default=False,
+        description="True if permission only for one weekday of the second week of the month"
+    )
+    third_week: Optional[bool] = Field(
+        default=False,
+        description="True if permission only for one weekday of the third week of the month"
+    )
+    last_week: Optional[bool] = Field(
+        default=False,
+        description="True if permission only for one weekday of the last week of the month"
+    )
+
 
 
 class WhitelistCreate(WhitelistBase):
@@ -90,8 +107,13 @@ class WhitelistCreate(WhitelistBase):
     years: Optional[int] = Field(
         default=None,
         description="years for adding to calculate permission end_time"
-    ) 
-    
+    )
+
+    @model_validator(mode="after")
+    def check_weekdays(self):
+        if self.weekday and any([self.first_week, self.second_week, self.third_week, self.last_week]):
+            raise HTTPException(status_code=400, detail=f"Error: weekday means every weekday of month, but first, second, third and last week means exact weekday of month")
+        return self
 
     @model_validator(mode="before")
     def validate_times(cls, values):
@@ -119,6 +141,7 @@ class WhitelistCreate(WhitelistBase):
         if start_time and end_time:
             values["start_time"] = str(start_time)
             values["end_time"] = str(end_time)
+            logger.info(f"{values['start_time'], values['end_time']}")
             return values
         
         values["start_time"] = str(start_time)
@@ -134,6 +157,7 @@ class WhitelistCreate(WhitelistBase):
             end_time += timedelta(weeks=values["weeks"])
         if values.get("months"):
             end_time += relativedelta(months=+values["months"])
+
         if values.get("years"):
             values["end_time"] = str(end_time.replace(year=end_time.year + values["years"]))
         else:
@@ -142,6 +166,7 @@ class WhitelistCreate(WhitelistBase):
 
     @model_validator(mode="after")
     def check_duration_consistency(self):
+        logger.info(f"checking{self}")
         if self.start_time and self.end_time:
             start_dt = datetime.strptime(self.start_time, "%Y-%m-%d %H:%M:%S")
             end_dt = datetime.strptime(self.end_time, "%Y-%m-%d %H:%M:%S")
